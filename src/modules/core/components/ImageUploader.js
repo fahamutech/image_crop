@@ -72,7 +72,6 @@ export function ImageUploader() {
         right_size: 10,
         bottom_size: 10,
         top_size: 10,
-        bottom_width: '100%',
         target_width: 0
     });
     const [source, setSource] = useState();
@@ -135,16 +134,14 @@ export function ImageUploader() {
             const targetHeight = (smallSide * 0.8);
             const windowPad = (windowHeight - divHeight) / 2;
             const yFromDiv = screenY - windowPad;
-            const yNewWidth = yFromDiv - (targetHeight / 2);
-            const yNewWidthBottom = divHeight - (yNewWidth + targetHeight);
-            const maxPadSize = divWidth - targetHeight;
+            const yNewHeight = yFromDiv - (targetHeight / 2);
+            const yNewWidthBottom = divHeight - (yNewHeight + targetHeight);
+            const maxPadSize = divHeight - targetHeight;
             setWindowData((p) => ({
                 ...p,
-                top_size: yNewWidth > 0 ? (yNewWidth >= maxPadSize ? maxPadSize : yNewWidth) : 0,
+                top_size: yNewHeight > 0 ? (yNewHeight >= maxPadSize ? maxPadSize : yNewHeight) : 0,
                 bottom_size: yNewWidthBottom > 0 ? (yNewWidthBottom >= maxPadSize ? maxPadSize : yNewWidthBottom) : 0,
-
             }));
-            // console.log(xNewWidth);
         }
     }, [mainDivRef]);
 
@@ -160,7 +157,7 @@ export function ImageUploader() {
                 right_size: ((width - (smallSide * 0.8))) / 2,
                 top_size: ((height - (smallSide * 0.8))) / 2,
                 bottom_size: ((height - (smallSide * 0.8))) / 2,
-                bottom_width: width - (((width - (smallSide * 0.8)))),
+                // bottom_width: width - (((width - (smallSide * 0.8)))),
                 target_width: smallSide * 0.8
             }))
         }
@@ -203,16 +200,15 @@ export function ImageUploader() {
                             id={'id123'}
                             ref={mainDivRef}
                             onDragOver={event => {
-                                const {clientX, clientY, screenX, screenY, pageX, pageY} = event;
-                                moveAlongX({screenX});
-                                moveAlongY({screenY});
+                                const {clientX, clientY} = event;
+                                moveAlongX({screenX: clientX});
+                                moveAlongY({screenY: clientY});
                             }}
                             onTouchMove={event => {
                                 const {changedTouches} = event
-                                const {clientX, clientY, screenX, screenY, pageX, pageY} = changedTouches[0];
-                                // console.log(JSON.stringify({clientX, clientY, screenX, screenY, pageX, pageY}, null, 2));
-                                // moveAlongX({screenX});
-                                // moveAlongY({screenY});
+                                const {clientX, clientY} = changedTouches[0];
+                                moveAlongX({screenX: clientX});
+                                moveAlongY({screenY: clientY});
                             }}
                             style={editorStyle}
                         >
