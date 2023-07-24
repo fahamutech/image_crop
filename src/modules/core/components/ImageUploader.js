@@ -4,7 +4,6 @@ const mainStyle = {
     minWidth: 200,
     maxWidth: '80%',
     minHeight: 200,
-    borderRadius: 8,
     backgroundColor: '#f5f5f5',
     display: 'flex',
     flexDirection: 'column',
@@ -13,50 +12,14 @@ const mainStyle = {
     position: 'relative'
 };
 
-const editorStyle = {
-    width: '100vw',
-    marginTop: 54,
-    minHeight: 300,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-};
-
 const barStyle = {
-    backgroundColor: 'rgba(0,0,0,0.5)'
-}
-
-function CloseIcon({onPress}) {
-    return (
-        <div onClick={onPress} style={{position: "relative", height: 48, width: 48}}>
-            <div style={{
-                position: "absolute",
-                width: 24,
-                height: 5,
-                borderRadius: 8,
-                rotate: '45deg',
-                backgroundColor: 'black'
-            }}/>
-            <div style={{
-                position: "absolute",
-                width: 24,
-                height: 5,
-                borderRadius: 8,
-                rotate: '135deg',
-                backgroundColor: 'black'
-            }}/>
-        </div>
-    )
+    backgroundColor: 'rgba(0,0,0,0.8)'
 }
 
 function LeftBar({size}) {
     return (
         <div style={{
-            ...{position: 'absolute', left: 0, width: size, height: '100%'},
+            ...{position: 'absolute', left: 0, top: 0, bottom: 0, width: size, height: '100%'},
             ...barStyle
         }}/>
     );
@@ -65,7 +28,7 @@ function LeftBar({size}) {
 function RightBar({size}) {
     return (
         <div style={{
-            ...{position: 'absolute', right: 0, width: size, height: '100%'},
+            ...{position: 'absolute', right: 0, top: 0, bottom: 0, width: size, height: '100%'},
             ...barStyle
         }}/>
     );
@@ -89,41 +52,15 @@ function BottomBar({size, width, marginLeft, marginRight}) {
     );
 }
 
-export function ImageUploader() {
+export function ImageCrop({source, setSource, onDone, mainDivRef, setMainDivRef, fileInputRef}) {
     const [windowData, setWindowData] = useState({
-        left_size: 10,
-        right_size: 10,
-        bottom_size: 10,
-        top_size: 10,
+        left_size: 0,
+        right_size: 0,
+        bottom_size: 0,
+        top_size: 0,
         target_width: 0,
         target_height: 0
     });
-    const [source, setSource] = useState();
-    const [sourceCropped, setSourceCropped] = useState();
-    const [loadingImage, setLoadingImage] = useState(false);
-    const [mainDivRef, setMainDivRef] = useState(createRef);
-    const fileInputRef = useRef();
-    const uploadImage = useMemo(() => {
-        return () => {
-            fileInputRef.current?.click()
-        }
-    }, [fileInputRef]);
-    const handleImage = useMemo(() => {
-        return (e) => {
-            const file = e?.target?.files?.[0]
-            if (file) {
-                setLoadingImage(true);
-                const fileReader = new FileReader();
-                fileReader.onload = (r) => {
-                    setSource(() => r?.target?.result);
-                    setLoadingImage(false);
-                };
-                fileReader.onloadend = () => setLoadingImage(false);
-                fileReader.onabort = () => setLoadingImage(false);
-                fileReader.readAsDataURL(file);
-            }
-        }
-    }, []);
 
     const moveAlongX = useMemo(() => {
         return ({screenX}) => {
@@ -142,7 +79,6 @@ export function ImageUploader() {
                 ...p,
                 left_size: xNewWidth > 0 ? (xNewWidth >= maxPadSize ? maxPadSize : xNewWidth) : 0,
                 right_size: xNewWidthRight > 0 ? (xNewWidthRight >= maxPadSize ? maxPadSize : xNewWidthRight) : 0,
-
             }));
             // console.log(xNewWidth);
         }
@@ -170,10 +106,10 @@ export function ImageUploader() {
     }, [mainDivRef]);
 
     useEffect(() => {
-        if (source) {
+        if (source && mainDivRef?.current) {
             const mainDiv = mainDivRef?.current;
-            const width = mainDiv?.offsetWidth;
-            const height = mainDiv?.offsetHeight;
+            const width = mainDiv?.clientWidth;
+            const height = mainDiv?.clientHeight;
             const smallSide = (width - height) > 0 ? height : width;
             setWindowData((p) => ({
                 ...p,
@@ -181,31 +117,116 @@ export function ImageUploader() {
                 right_size: ((width - (smallSide * 0.8))) / 2,
                 top_size: ((height - (smallSide * 0.8))) / 2,
                 bottom_size: ((height - (smallSide * 0.8))) / 2,
-                // bottom_width: width - (((width - (smallSide * 0.8)))),
                 target_width: smallSide * 0.8
             }))
         }
     }, [source, mainDivRef]);
 
-    const cancelCrop = useMemo(()=>{
-        return ()=>{
+    const cancelCrop = useMemo(() => {
+        return () => {
             setSource(undefined);
-            fileInputRef.current.value=null;
+            fileInputRef.current.value = null;
         }
-    },[]);
-    const cropImage = useMemo(()=>{
-        return ()=>{
-            console.log(JSON.stringify(windowData,null,2))
+    }, [fileInputRef, setSource]);
+
+    const cropImage = useMemo(() => {
+        return () => {
+            onDone(windowData);
         }
-    },[windowData]);
+    }, [onDone, windowData]);
+
+    return (
+        <div style={editorContainerStyle}>
+            <div style={editorColumnStyle}>
+                <div style={editorAppBarStyle}>
+                    <div onClick={cancelCrop} style={editorCancelContainer}>
+                    <span style={editorCancelText}>
+                        CANCEL
+                    </span>
+                    </div>
+                    <div style={editorDoneContainer}>
+                    <span onClick={cropImage} style={editorDoneText}>
+                        DONE CROP
+                    </span>
+                    </div>
+                </div>
+                <div style={{
+                    flex: 1,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }}>
+                    <div
+                        id={'id123'}
+                        onDragOver={event => {
+                            const {clientX, clientY} = event;
+                            moveAlongX({screenX: clientX});
+                            moveAlongY({screenY: clientY});
+                        }}
+                        onTouchMove={event => {
+                            const {changedTouches} = event
+                            const {clientX, clientY} = changedTouches[0];
+                            moveAlongX({screenX: clientX});
+                            moveAlongY({screenY: clientY});
+                        }}
+                        style={editorStyle}
+                    >
+                        <img
+                            ref={mainDivRef}
+                            onLoad={_ => setMainDivRef(createRef)}
+                            style={{maxWidth: '100%', maxHeight: window.innerHeight-54}}
+                            alt={''}
+                            src={source}
+                        />
+                        <LeftBar size={windowData.left_size}/>
+                        <RightBar size={windowData.right_size}/>
+                        <TopBar
+                            width={windowData?.target_width}
+                            marginLeft={windowData.left_size}
+                            marginRight={windowData.right_size}
+                            size={windowData.top_size}/>
+                        <BottomBar
+                            width={windowData.target_width}
+                            marginLeft={windowData.left_size}
+                            marginRight={windowData.right_size}
+                            size={windowData.bottom_size}/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export function ImageUploader() {
+    const [source, setSource] = useState();
+    const [mainDivRef, setMainDivRef] = useState(createRef);
+    const fileInputRef = useRef();
+    const uploadImage = useMemo(() => {
+        return () => {
+            fileInputRef.current?.click()
+        }
+    }, [fileInputRef]);
+    const handleImage = useMemo(() => {
+        return (e) => {
+            const file = e?.target?.files?.[0]
+            if (file) {
+                const fileReader = new FileReader();
+                fileReader.onload = (r) => {
+                    setSource(_5 => r?.target?.result);
+                };
+                fileReader.readAsDataURL(file);
+            }
+        }
+    }, []);
+    const [sourceCropped, setSourceCropped] = useState();
     return (
         <>
             <div onClick={uploadImage} style={mainStyle}>
                 {
                     sourceCropped && <>
-                        <img onLoad={_ => {
-                            setMainDivRef(createRef);
-                        }} style={{width: '100%'}} alt={''} src={sourceCropped}/>
+                        <img style={{width: '100%'}} alt={''} src={sourceCropped}/>
                     </>
                 }
                 <input
@@ -219,89 +240,68 @@ export function ImageUploader() {
             </div>
             {
                 source && <>
-                    <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        right: 0,
-                        left: 0,
-                        background: "black",
-                        zIndex: 9999999,
-                        height: '100vh',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                    }}>
-                        <div style={{
-                            height: 54,
-                            position: 'fixed',
-                            top: 0,
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            flexDirection: 'row'
-                        }}>
-                            <div onClick={cancelCrop} style={{
-                                backgroundColor: 'red',
-                                flexGrow: 1,
-                                height: '100%',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                display: 'flex',
-                                cursor: 'pointer'
-                            }}>
-                                <span style={{
-                                    fontSize: 16, fontWeight: 600, color: 'white'
-                                }}>CANCEL</span>
-                            </div>
-                            <div style={{
-                                flexGrow: 1,
-                                height: '100%',
-                                backgroundColor: '#343434',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                display: 'flex',
-                                cursor: 'pointer'
-                            }}>
-                                <span onClick={cropImage} style={{fontSize: 16, fontWeight: 600, color: 'white'}}>
-                                    DONE CROP
-                                </span>
-                            </div>
-                        </div>
-                        <div
-                            id={'id123'}
-                            ref={mainDivRef}
-                            onDragOver={event => {
-                                const {clientX, clientY} = event;
-                                moveAlongX({screenX: clientX});
-                                moveAlongY({screenY: clientY});
-                            }}
-                            onTouchMove={event => {
-                                const {changedTouches} = event
-                                const {clientX, clientY} = changedTouches[0];
-                                moveAlongX({screenX: clientX});
-                                moveAlongY({screenY: clientY});
-                            }}
-                            style={editorStyle}
-                        >
-                            <img onLoad={_ => {
-                                setMainDivRef(createRef);
-                            }} style={{width: '100%'}} alt={''} src={source}/>
-                            <LeftBar size={windowData.left_size}/>
-                            <RightBar size={windowData.right_size}/>
-                            <TopBar
-                                width={windowData?.target_width}
-                                marginLeft={windowData.left_size}
-                                marginRight={windowData.right_size}
-                                size={windowData.top_size}/>
-                            <BottomBar
-                                width={windowData.target_width}
-                                marginLeft={windowData.left_size}
-                                marginRight={windowData.right_size}
-                                size={windowData.bottom_size}/>
-                        </div>
-                    </div>
+                    <ImageCrop
+                        mainDivRef={mainDivRef}
+                        setMainDivRef={setMainDivRef}
+                        fileInputRef={fileInputRef}
+                        source={source}
+                        setSource={setSource}
+                        onDone={(d) => {
+                            console.log(JSON.stringify(d, null, 2));
+                        }}
+                    />
                 </>
             }
         </>
     );
 }
+
+const editorContainerStyle = {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    left: 0,
+    bottom: 0,
+    background: "black",
+    zIndex: 9999999,
+    height: '100vh'
+};
+
+const editorAppBarStyle = {
+    minHeight: 54,
+    display: 'flex',
+    alignItems: 'center',
+    flexDirection: 'row'
+};
+const editorCancelContainer = {
+    backgroundColor: 'red',
+    flexGrow: 1,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    display: 'flex',
+    cursor: 'pointer'
+};
+const editorCancelText = {fontSize: 16, fontWeight: 600, color: 'white'};
+const editorDoneContainer = {
+    flexGrow: 1,
+    height: '100%',
+    backgroundColor: '#343434',
+    justifyContent: 'center',
+    alignItems: 'center',
+    display: 'flex',
+    cursor: 'pointer'
+};
+const editorDoneText = {fontSize: 16, fontWeight: 600, color: 'white'};
+const editorStyle = {
+    maxWidth: '100%',
+    maxHeight: '100%',
+    backgroundColor: '#000000',
+    position: 'relative',
+};
+const editorColumnStyle = {
+    display: 'flex',
+    width: '100%',
+    height: '100%',
+    flexDirection: 'column'
+};
