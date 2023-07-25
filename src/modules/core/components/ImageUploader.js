@@ -52,6 +52,24 @@ function BottomBar({size, width, marginLeft, marginRight}) {
     );
 }
 
+/**
+ *
+ * @param source
+ * @param setSource
+ * @param onDone{{
+ *     left_size:number,
+ *     right_size:number,
+ *     bottom_size: number,
+ *     top_size: number,
+ *     target_width: number,
+ *     target_height: number
+ * }}
+ * @param mainDivRef
+ * @param setMainDivRef
+ * @param fileInputRef
+ * @returns {JSX.Element}
+ * @constructor
+ */
 export function ImageCrop({source, setSource, onDone, mainDivRef, setMainDivRef, fileInputRef}) {
     const [windowData, setWindowData] = useState({
         left_size: 0,
@@ -117,7 +135,8 @@ export function ImageCrop({source, setSource, onDone, mainDivRef, setMainDivRef,
                 right_size: ((width - (smallSide * 0.8))) / 2,
                 top_size: ((height - (smallSide * 0.8))) / 2,
                 bottom_size: ((height - (smallSide * 0.8))) / 2,
-                target_width: smallSide * 0.8
+                target_width: smallSide * 0.8,
+                target_height: smallSide * 0.8,
             }))
         }
     }, [source, mainDivRef]);
@@ -176,7 +195,7 @@ export function ImageCrop({source, setSource, onDone, mainDivRef, setMainDivRef,
                         <img
                             ref={mainDivRef}
                             onLoad={_ => setMainDivRef(createRef)}
-                            style={{maxWidth: '100%', maxHeight: window.innerHeight-54}}
+                            style={{maxWidth: '100%', maxHeight: window.innerHeight - 54, backgroundColor: 'white'}}
                             alt={''}
                             src={source}
                         />
@@ -220,13 +239,13 @@ export function ImageUploader() {
             }
         }
     }, []);
-    const [sourceCropped, setSourceCropped] = useState();
+    const [sourceCropped, setSourceCropped] = useState(undefined);
     return (
         <>
             <div onClick={uploadImage} style={mainStyle}>
                 {
                     sourceCropped && <>
-                        <img style={{width: '100%'}} alt={''} src={sourceCropped}/>
+                        <img style={{maxWidth: 250, maxHeight: '80%', borderRadius: 8}} alt={''} src={sourceCropped}/>
                     </>
                 }
                 <input
@@ -247,7 +266,35 @@ export function ImageUploader() {
                         source={source}
                         setSource={setSource}
                         onDone={(d) => {
-                            console.log(JSON.stringify(d, null, 2));
+
+                            // console.log(JSON.stringify(d, null, 2));
+
+                            const img = new Image();
+                            img.onload = () => {
+                                const myCanvas = document.createElement('canvas');
+                                const widthRatio = img.naturalWidth / mainDivRef.current?.width;
+                                const heightRatio = img.naturalHeight / mainDivRef.current.height;
+
+                                myCanvas.width = widthRatio * d.target_width;
+                                myCanvas.height = heightRatio * d.target_height;
+                                const context = myCanvas.getContext('2d');
+                                context.drawImage(
+                                    img,
+                                    widthRatio * d.left_size,
+                                    heightRatio * d.top_size,
+                                    widthRatio * (d.target_width),
+                                    heightRatio * (d.target_height),
+                                    0,
+                                    0,
+                                    widthRatio * d.target_width,
+                                    widthRatio * d.target_height
+                                );
+                                setSourceCropped(myCanvas.toDataURL());
+                                myCanvas.remove();
+                                setSource(undefined);
+                                fileInputRef.current.value = null;
+                            }
+                            img.src = source;
                         }}
                     />
                 </>
