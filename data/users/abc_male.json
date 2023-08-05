@@ -1,0 +1,9 @@
+{
+  "id": "abc",
+  "name": "joshua",
+  "birthday": "1999-09-09",
+  "gender": "Male",
+  "study": "A-Level",
+  "interest": "long-term",
+  "km_from_cc": 14
+}
